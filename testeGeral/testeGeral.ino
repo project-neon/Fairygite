@@ -18,7 +18,7 @@
 // WEAPONS MOTOR PINS
 #define WEAPONPWM 15
 
-Servo weaponMotor;
+Servo myservo;
 
 const char* ssid = "AndroidAP5554";
 const char* password = "wzte4104";
@@ -52,21 +52,6 @@ void setup() {
   Serial.begin(115200);
   delay(10);
 
-//
-//Conectar com Wifi
-//
-  Serial.println("");
-  Serial.println("");
-  Serial.print("conenctando a ");
-  Serial.print(ssid);
-
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500); 
-    Serial.print(".");
-  }
-
-  udp.begin(80);
 
 //
 //Configuração do ESC
@@ -102,25 +87,29 @@ void setup() {
 
 void sendToMotor(int powerML, int powerMR){
   if(powerML > 0){
+    Serial.print("ml+");
     digitalWrite(ML1, 1);
     digitalWrite(ML2, 0);
   }else{
+    Serial.print("ml-");
     digitalWrite(ML1, 0);
     digitalWrite(ML2, 1);
   }
 
   if(powerMR > 0){
+    Serial.print("mr+");
     digitalWrite(MR1, 1);
     digitalWrite(MR2, 0);
   }else{
+    Serial.print("mr-");
     digitalWrite(MR1, 0);
     digitalWrite(MR2, 1);
   }
   powerML = powerML * (1023 / 100.0);
   powerMR = powerMR * (1023 / 100.0);
 
-  analogWrite(MLPWM, powerML);
-  analogWrite(MRPWM, powerMR);
+  analogWrite(MLPWM, abs(powerML));
+  analogWrite(MRPWM, abs(powerMR));
   
 }
 
@@ -141,37 +130,34 @@ void loop() {
    * POW_RIGHT: potencia, de 0 a 100, do motor direito
    * WEAPON_SWITCH: switch para ligar/desligar arma (caso tenha). 0 desligado, 1 ligado
    */
-  
-    request = "";
-    delay(1);
-    if (udp.parsePacket() > 0) {
-      request = "";
-      while (udp.available() > 0) { 
-        char z = udp.read();
-        request+= z;
-      }
-      /*
-      * -100+1001
-      * ---------
-      * 000000000
-      * 012345678
-      */
-      pow_linear = request.substring(0, 4).toInt(); // [-100:100]
-      pow_angular = request.substring(4, 8).toInt(); // [-50:50]
-      weapon = request.substring(8).toInt(); // [0:1]
 
-
-      Serial.println("------------");
-      Serial.println(pow_linear);
-      Serial.println(pow_angular);
-      Serial.println(weapon);
-      Serial.println("------------");
-      
-      weaponMotor.writeMicroseconds(weapon * 1700);
-    
-    weaponMotor.writeMicroseconds(weapon * 1700);
-
-//    sendToMotor(MLPWM, pow_linear);
-//    sendToMotor(MRPWM, pow_linear);
+    sendToMotor(100,100);
+    delay(1000); 
+    sendToMotor(-100,-100);
+    for (int vel = 0; vel <= 100; vel += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    Serial.println(vel);
+    sendToMotor(vel,vel);             // tell servo to go to position in variable 'pos'
+    delay(20);                       // waits 15ms for the servo to reach the position
   }
-}
+    for (int vel = 0; vel <= 100; vel += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    Serial.println(-vel);
+    sendToMotor(-vel,-vel);             // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+  }
+
+  int pos;
+
+  for (pos = 1000; pos <= 2000; pos += 5) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    Serial.println(pos);
+    myservo.writeMicroseconds(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15ms for the servo to reach the position
+  }
+  for (pos = 2000; pos >= 1000; pos -= 5) { // goes from 180 degrees to 0 degrees
+    Serial.println(pos);
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15ms for the servo to reach the position
+  }
+ }
